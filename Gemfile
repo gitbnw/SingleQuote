@@ -5,4 +5,4 @@ gem 'oauth'
 
 gem 'dotenv'
 
-gem "alexa_rubykit", :git => 'https://github.com/damianFC/alexa-rubykit.git'
+gem "alexa_rubykit"
