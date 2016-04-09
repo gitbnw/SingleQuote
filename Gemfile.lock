@@ -1,16 +1,12 @@
-GIT
-  remote: https://github.com/damianFC/alexa-rubykit.git
-  revision: 611810ea70ed1d637f388bd094bc0fef9bc4a253
+GEM
+  remote: http://rubygems.org/
   specs:
     alexa_rubykit (1.1.0)
       bundler (~> 1.7)
       rake (~> 10.0)
-
-GEM
-  remote: http://rubygems.org/
-  specs:
     dotenv (2.1.1)
     oauth (0.5.1)
+    openssl-extensions (1.2.1)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -25,9 +21,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  alexa_rubykit!
+  alexa_rubykit
   dotenv
   oauth
+  openssl-extensions
   sinatra
 
 BUNDLED WITH

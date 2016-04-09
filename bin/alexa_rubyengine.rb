@@ -6,34 +6,84 @@ require 'bundler/setup'
 require 'alexa_rubykit'
 require 'oauth'
 require 'dotenv'
-  
+require 'uri'
+require 'open-uri'
+require 'openssl-extensions/all'
+
 Dotenv.load
 
   CONSUMER_KEY    = ENV['CONSUMER_KEY']
   CONSUMER_SECRET = ENV['CONSUMER_SECRET']
 
 # We must return application/json as our content type.
-# before do
-#   content_type('application/json')
-# end
-
-get '/' do
-  "Hello World!"
+before do
+  content_type('application/json')
 end
+
+# get '/' do
+#   "Hello World!"
+# end
 
 #enable :sessions
 post '/' do
   
-  # p CONSUMER_KEY
+  body = request.body.read
+  
+  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
+  
+  halt 403 unless @sig_url =~ /\A#{URI::regexp(['https'])}\z/
+  
+  #parse and normalize uri
+  @uri = URI.parse(@sig_url)
+  @uri = @uri.normalize
+  @host = @uri.host.downcase
+  @filename = URI(@uri).path.split('/').last
+
+  halt 403 unless @uri.scheme == 'https' && @host == 's3.amazonaws.com'  && @uri.path.start_with?('/echo.api/') && @uri.port == 443
+
   
   # Check that it's a valid Alexa request
-  request_json = JSON.parse(request.body.read.to_s)
-  # Creates a new Request object with the request parameter.
-  request = AlexaRubykit.build_request(request_json)
+  request_json = JSON.parse(body.to_s)
 
+  # Creates a new Request object with the request parameter.
+  alexa_request = AlexaRubykit.build_request(request_json)
+  
+  @timestamp = Time.parse request_json['request']['timestamp']
+  @start = Time.now.getutc - 150
+  @end = Time.now.getutc + 150
+  
+  halt 403 unless (@start.to_i..@end.to_i).include?(@timestamp.to_i)
+  
+  #save the pem
+  File.open(@filename, "wb") do |saved_file|
+    # the following "open" is provided by open-uri
+    open(@sig_url, "rb") do |read_file|
+      saved_file.write(read_file.read)
+    end
+  end
+  
+  #check the pem
+  raw = File.read @filename # DER- or PEM-encoded
+  certificate = OpenSSL::X509::Certificate.new raw  
+  @san = certificate.subject_alternative_names[0]
+  @now = Time.now.getutc
+  @c_start = certificate.not_before
+  @c_end = certificate.not_after
+  
+  # The signing certificate has not expired (examine both the Not Before and Not After dates)
+  # The domain echo-api.amazon.com is present in the Subject Alternative Names (SANs) section of the signing certificate
+  halt 403 unless (@c_start.to_i..@c_end.to_i).include?(@now.to_i) && @san == "echo-api.amazon.com"
+
+  sig_header = request.env["HTTP_SIGNATURE"]
+  digest = OpenSSL::Digest::SHA1.new
+  signature = Base64.decode64(sig_header)
+  halt 403 unless certificate.public_key.verify(digest, signature, body)
+
+
+  
   # We can capture Session details inside of request.
   # See session object for more information.
-  session = request.session
+  session = alexa_request.session
   # p session.new?
   # p session.has_attributes?
   # p session.session_id
@@ -44,24 +94,24 @@ post '/' do
 
   # We can manipulate the request object.
   #
-  #p "#{request.to_s}"
-  #p "#{request.request_id}"
+  #p "#{alexa_request.to_s}"
+  #p "#{alexa_request.request_id}"
 
   # Response
   # If it's a launch request
-  if (request.type == 'LAUNCH_REQUEST')
+  if (alexa_request.type == 'LAUNCH_REQUEST')
     # Process your Launch Request
     # Call your methods for your application here that process your Launch Request.
     response.add_speech('You can ask: What is the quote for IBM? Or just say IBM.')
     response.add_hash_card( { :title => 'Nasdaq Quotes', :subtitle => 'Diversify your portfolio!' } )
   end
 
-  if (request.type == 'INTENT_REQUEST')
+  if (alexa_request.type == 'INTENT_REQUEST')
     # Process your Intent Request
 
-    if (request.name == 'GetQuote')
-      # p "#{request.slots['SymbolRequest']['value']}"
-      @symbol = request.slots['SymbolRequest']['value']
+    if (alexa_request.name == 'GetQuote')
+      # p "#{alexa_request.slots['SymbolRequest']['value']}"
+      @symbol = alexa_request.slots['SymbolRequest']['value']
       @output = YQLFinance.new.find_quote(@symbol).output
       
       if @output["LastTradePriceOnly"].nil? 
@@ -82,10 +132,10 @@ post '/' do
     end
   end
 
-  if (request.type =='SESSION_ENDED_REQUEST')
+  if (alexa_request.type =='SESSION_ENDED_REQUEST')
     # Wrap up whatever we need to do.
-    # p "#{request.type}"
-    # p "#{request.reason}"
+    # p "#{alexa_request.type}"
+    # p "#{alexa_request.reason}"
     halt 200
   end
 
