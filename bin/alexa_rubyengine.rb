@@ -88,7 +88,7 @@ post '/' do
     @certificate.public_key.verify(@digest, @signature, @body)
   end
   
-  # halt 403 unless check_https && check_scheme #&& check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert # && check_your_head
+  halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert
 
   alexa_request = AlexaRubykit.build_request(@request_json)
   # We can capture Session details inside of request.
@@ -119,7 +119,7 @@ post '/' do
         @output = Markit.new.find_quote(@symbol).output
         p @output
         if @output["Error"]
-          response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
+          response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
         else
           @ltp = @output["StockQuote"]["LastPrice"]
           @change_float = @output["StockQuote"]["ChangePercent"].to_f
