@@ -118,15 +118,15 @@ post '/' do
       else
         @output = Markit.new.find_quote(@symbol).output
 
-        if @output["Status"] != 'SUCCESS' || @output.nil?
+        if @output["StockQuote"]["Status"] != 'SUCCESS' || @output.nil?
           #Yahoo could not find company or found too many.
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
         else
         
-          @ltp = @output["LastPrice"]
-          @change_float = @output["ChangePercent"].to_f
+          @ltp = @output["StockQuote"]["LastPrice"]
+          @change_float = @output["StockQuote"]["ChangePercent"].to_f
           @change = @change_float.round(2).to_s
-          @name = @output["Name"]
+          @name = @output["StockQuote"]["Name"]
           
           if @change_float > 0
             @change_sign = "up"
@@ -174,7 +174,7 @@ end
     end
  
     def output
-      @response["StockQuote"]#["results"]["quote"]
+      @response#["StockQuote"]["results"]["quote"]
     end
   end
   
