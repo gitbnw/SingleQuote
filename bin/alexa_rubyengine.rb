@@ -22,11 +22,11 @@ end
 post '/' do
   
   @body = request.body.read
-  # @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
-  # @uri = URI.parse(@sig_url)
-  # @host = @uri.host.downcase
+  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
+  @uri = URI.parse(@sig_url)
+  @host = @uri.host.downcase
   @request_json = JSON.parse(@body.to_s)
-  # @filename = URI(@uri).path.split('/').last
+  @filename = URI(@uri).path.split('/').last
   
   def check_https 
     @sig_url =~ /\A#{URI::regexp(['https'])}\z/
@@ -56,17 +56,17 @@ post '/' do
     (@start.to_i..@end.to_i).include?(@timestamp.to_i)
   end
   
-  #save the pem
-  # File.open(@filename, "wb") do |saved_file|
-  #   # the following "open" is provided by open-uri
-  #   open(@sig_url, "rb") do |read_file|
-  #     saved_file.write(read_file.read)
-  #   end
-  # end
+  save the pem
+  File.open(@filename, "wb") do |saved_file|
+    # the following "open" is provided by open-uri
+    open(@sig_url, "rb") do |read_file|
+      saved_file.write(read_file.read)
+    end
+  end
 
-  #check the pem
-  # raw = File.read @filename # DER- or PEM-encoded
-  # @certificate = OpenSSL::X509::Certificate.new raw 
+  check the pem
+  raw = File.read @filename # DER- or PEM-encoded
+  @certificate = OpenSSL::X509::Certificate.new raw 
   
   def check_cert_expire
     # The signing certificate has not expired (examine both the Not Before and Not After dates)
@@ -116,10 +116,8 @@ post '/' do
       if @symbol.nil?
         response.add_speech("I'm sorry, I didn't catch that stock symbol.  You can say things like - Tell me the quote for G.O.O.G.")
       else
-          @output = Markit.new.find_quote(@symbol).output
+        @output = Markit.new.find_quote(@symbol).output
 
-p @output
-        
         if @output["Status"] != 'SUCCESS' 
           #Yahoo could not find company or found too many.
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
@@ -155,10 +153,10 @@ end
 
   class Markit
   
-        # quote_url = "select * from yahoo.finance.quotes where symbol = '#{symbol}'"
-        def find_quote symbol
-          Quote.new HTTParty.get("http://dev.markitondemand.com/MODApis/Api/v2/Quote?symbol=#{symbol}")
-        end
+    # quote_url = "select * from yahoo.finance.quotes where symbol = '#{symbol}'"
+    def find_quote symbol
+      Quote.new HTTParty.get("http://dev.markitondemand.com/MODApis/Api/v2/Quote?symbol=#{symbol}")
+    end
   end
   class Quote
     def initialize(response)
@@ -166,7 +164,6 @@ end
     end
  
     def output
-      p @response
       @response["StockQuote"]#["results"]["quote"]
     end
   end
