@@ -124,12 +124,21 @@ post '/' do
         else
         
           @ltp = @output["LastPrice"]
-          @change = @output["ChangePercent"].to_f.round(2).to_s
+          @change_float = @output["ChangePercent"].to_f
+          @change = @change_float.round(2).to_s
           @name = @output["Name"]
+          @changestr = "#{@change_sign} #{@change}"
           
+          if @change_float > 0
+            @change_sign = "up"
+          elsif @change_float < 0
+            @change_sign = "down"
+          else
+            @changestr = "unchanged"
+          end
           
           #I need code to verify the company symbol (or name) is in custom slot values (or do i?  i  at least need to make sure it is a stock (or do I?  I could just check what yahoo returns either way)
-          response.add_speech("The last traded price of #{@name} is #{@ltp}, #{@change} percent")
+          response.add_speech("The last traded price of #{@name} is #{@ltp}, #{@changestr} percent")
           @card_string = "#{@ltp}, #{@change}%"
           response.add_hash_card( { :title => @symbol, :content => @card_string } )  
         end
