@@ -5,7 +5,11 @@ GEM
       bundler (~> 1.7)
       rake (~> 10.0)
     dotenv (2.1.1)
-    oauth (0.5.1)
+    httparty (0.13.7)
+      json (~> 1.8)
+      multi_xml (>= 0.5.2)
+    json (1.8.3)
+    multi_xml (0.5.5)
     openssl-extensions (1.2.1)
     rack (1.6.4)
     rack-protection (1.5.3)
@@ -23,7 +27,7 @@ PLATFORMS
 DEPENDENCIES
   alexa_rubykit
   dotenv
-  oauth
+  httparty
   openssl-extensions
   sinatra
 

@@ -4,16 +4,10 @@ require 'sinatra'
 require 'json'
 require 'bundler/setup'
 require 'alexa_rubykit'
-require 'oauth'
-require 'dotenv'
 require 'uri'
 require 'open-uri'
 require 'openssl-extensions/all'
-
-Dotenv.load
-
-  CONSUMER_KEY    = ENV['CONSUMER_KEY']
-  CONSUMER_SECRET = ENV['CONSUMER_SECRET']
+require 'httparty'
 
 # We must return application/json as our content type.
 before do
@@ -28,11 +22,11 @@ end
 post '/' do
   
   @body = request.body.read
-  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
-  @uri = URI.parse(@sig_url)
-  @host = @uri.host.downcase
+  # @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
+  # @uri = URI.parse(@sig_url)
+  # @host = @uri.host.downcase
   @request_json = JSON.parse(@body.to_s)
-  @filename = URI(@uri).path.split('/').last
+  # @filename = URI(@uri).path.split('/').last
   
   def check_https 
     @sig_url =~ /\A#{URI::regexp(['https'])}\z/
@@ -63,16 +57,16 @@ post '/' do
   end
   
   #save the pem
-  File.open(@filename, "wb") do |saved_file|
-    # the following "open" is provided by open-uri
-    open(@sig_url, "rb") do |read_file|
-      saved_file.write(read_file.read)
-    end
-  end
+  # File.open(@filename, "wb") do |saved_file|
+  #   # the following "open" is provided by open-uri
+  #   open(@sig_url, "rb") do |read_file|
+  #     saved_file.write(read_file.read)
+  #   end
+  # end
 
   #check the pem
-  raw = File.read @filename # DER- or PEM-encoded
-  @certificate = OpenSSL::X509::Certificate.new raw 
+  # raw = File.read @filename # DER- or PEM-encoded
+  # @certificate = OpenSSL::X509::Certificate.new raw 
   
   def check_cert_expire
     # The signing certificate has not expired (examine both the Not Before and Not After dates)
@@ -94,7 +88,7 @@ post '/' do
     @certificate.public_key.verify(@digest, @signature, @body)
   end
   
-  halt 403 unless check_https && check_scheme #&& check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert # && check_your_head
+  # halt 403 unless check_https && check_scheme #&& check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert # && check_your_head
 
   alexa_request = AlexaRubykit.build_request(@request_json)
   # We can capture Session details inside of request.
@@ -122,24 +116,23 @@ post '/' do
       if @symbol.nil?
         response.add_speech("I'm sorry, I didn't catch that stock symbol.  You can say things like - Tell me the quote for G.O.O.G.")
       else
-          @output = YQLFinance.new.find_quote(@symbol).output
-          
+          @output = Markit.new.find_quote(@symbol).output
 
-
+p @output
         
-        if @output["count"] != 1 || @output["results"]["quote"]["LastTradePriceOnly"].nil?
+        if @output["Status"] != 'SUCCESS' 
           #Yahoo could not find company or found too many.
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
         else
         
-          @ltp = @output["results"]["quote"]["LastTradePriceOnly"]
-          @change = @output["results"]["quote"]["ChangeinPercent"]
-          @name = @output["results"]["quote"]["Name"]
+          @ltp = @output["LastPrice"]
+          @change = @output["ChangePercent"].to_f.round(2).to_s
+          @name = @output["Name"]
           
           
           #I need code to verify the company symbol (or name) is in custom slot values (or do i?  i  at least need to make sure it is a stock (or do I?  I could just check what yahoo returns either way)
-          response.add_speech("The last traded price of #{@name} is #{@ltp}, #{@change}")
-          @card_string = "#{@ltp}, #{@change}"
+          response.add_speech("The last traded price of #{@name} is #{@ltp}, #{@change} percent")
+          @card_string = "#{@ltp}, #{@change}%"
           response.add_hash_card( { :title => @symbol, :content => @card_string } )  
         end
       end
@@ -160,44 +153,21 @@ end
 # Yahoo
  
 
- 
-  class YQLFinance
-    def initialize(consumer_key = CONSUMER_KEY, consumer_secret = CONSUMER_SECRET)
-      @consumer_key    = consumer_key
-      @consumer_secret = consumer_secret
-      access_token
-    end
- 
-    def access_token
-      @access_token ||= OAuth::AccessToken.new(OAuth::Consumer.new(@consumer_key, @consumer_secret, :site => "http://query.yahooapis.com"))
-    end
-    
-    def escape string
-      OAuth::Helper.escape(string)
-    end
- 
-    def make_query_url url
-      "/v1/yql?q=#{OAuth::Helper.escape(url)}&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys"
-    end
- 
-    def query_api url
-      JSON.parse access_token.request(:get, make_query_url(url)).body
-    end
-
-    def find_quote symbol 
-      quote_url = "select * from yahoo.finance.quotes where symbol = '#{symbol}'"
-      Quote.new query_api(quote_url)
-    end
-
+  class Markit
+  
+        # quote_url = "select * from yahoo.finance.quotes where symbol = '#{symbol}'"
+        def find_quote symbol
+          Quote.new HTTParty.get("http://dev.markitondemand.com/MODApis/Api/v2/Quote?symbol=#{symbol}")
+        end
   end
- 
   class Quote
     def initialize(response)
       @response = response
     end
  
     def output
-      @response["query"]#["results"]["quote"]
+      p @response
+      @response["StockQuote"]#["results"]["quote"]
     end
   end
   
