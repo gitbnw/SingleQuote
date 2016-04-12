@@ -56,7 +56,7 @@ post '/' do
     (@start.to_i..@end.to_i).include?(@timestamp.to_i)
   end
   
-  save the pem
+  #save the pem
   File.open(@filename, "wb") do |saved_file|
     # the following "open" is provided by open-uri
     open(@sig_url, "rb") do |read_file|
@@ -88,7 +88,7 @@ post '/' do
     @certificate.public_key.verify(@digest, @signature, @body)
   end
   
-  # halt 403 unless check_https && check_scheme #&& check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert # && check_your_head
+  halt 403 unless check_https && check_scheme #&& check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert # && check_your_head
 
   alexa_request = AlexaRubykit.build_request(@request_json)
   # We can capture Session details inside of request.
