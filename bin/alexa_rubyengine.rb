@@ -118,7 +118,7 @@ post '/' do
       else
         @output = Markit.new.find_quote(@symbol).output
 
-        if @output["Status"] != 'SUCCESS' 
+        if @output["Status"] != 'SUCCESS' || @output.nil?
           #Yahoo could not find company or found too many.
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
         else
