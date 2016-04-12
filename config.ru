@@ -1,2 +1,2 @@
-require './alexa_rubyengine'
+require './bin/alexa_rubyengine'
 run Sinatra::Application
