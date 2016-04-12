@@ -64,7 +64,7 @@ post '/' do
     end
   end
 
-  check the pem
+  # check the pem
   raw = File.read @filename # DER- or PEM-encoded
   @certificate = OpenSSL::X509::Certificate.new raw 
   
