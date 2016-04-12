@@ -117,8 +117,7 @@ post '/' do
         response.add_speech("I'm sorry, I didn't catch that stock symbol.  You can say things like - Tell me the quote for G.O.O.G.")
       else
         @output = Markit.new.find_quote(@symbol).output
-
-        if @output["StockQuote"]["Status"] != 'SUCCESS' || @output.nil?
+        if @output.nil? || @output["StockQuote"]["Status"] != 'SUCCESS' || 
           #Yahoo could not find company or found too many.
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for nasdaq symbols, like AMZN. or TSLA. Which quote would you like? ")
         else
