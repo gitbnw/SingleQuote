@@ -127,12 +127,13 @@ post '/' do
           @change_float = @output["ChangePercent"].to_f
           @change = @change_float.round(2).to_s
           @name = @output["Name"]
-          @changestr = "#{@change_sign} #{@change}"
           
           if @change_float > 0
             @change_sign = "up"
+            @changestr = "#{@change_sign} #{@change}"
           elsif @change_float < 0
             @change_sign = "down"
+            @changestr = "#{@change_sign} #{@change}"
           else
             @changestr = "unchanged"
           end
