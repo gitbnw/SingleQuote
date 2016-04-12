@@ -104,7 +104,7 @@ post '/' do
     # Process your Launch Request
     # Call your methods for your application here that process your Launch Request.
     response.add_speech('You can ask: What is the quote for IBM? Or just say IBM.')
-    response.add_hash_card( { :title => 'Nasdaq Quotes', :subtitle => 'Diversify your bonds!' } )
+    response.add_hash_card( { :title => 'Single Quotes', :subtitle => 'Diversify your bonds!' } )
   end
 
   if (alexa_request.type == 'INTENT_REQUEST')
