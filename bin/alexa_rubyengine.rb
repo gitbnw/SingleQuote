@@ -50,7 +50,7 @@ post '/' do
   end
   
   def check_within150
-    @timestamp = Time.parse request_json['request']['timestamp']
+    @timestamp = Time.parse @request_json['request']['timestamp']
     @start = Time.now.getutc - 150
     @end = Time.now.getutc + 150 
     (@start.to_i..@end.to_i).include?(@timestamp.to_i)
