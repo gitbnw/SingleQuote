@@ -8,6 +8,7 @@ require 'uri'
 require 'open-uri'
 require 'openssl-extensions/all'
 require 'httparty'
+require 'rack-google-analytics'
 
 use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
 
