@@ -9,6 +9,8 @@ require 'open-uri'
 require 'openssl-extensions/all'
 require 'httparty'
 
+use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
+
 # We must return application/json as our content type.
 before do
   content_type('application/json')
@@ -103,8 +105,8 @@ post '/' do
   if (alexa_request.type == 'LAUNCH_REQUEST')
     # Process your Launch Request
     # Call your methods for your application here that process your Launch Request.
-    response.add_speech('You can ask: What is the quote for IBM? Or just say IBM.')
-    response.add_hash_card( { :title => 'Single Quotes', :subtitle => 'Diversify your bonds!' } )
+    response.add_speech('Welcome to Single Quote!  What stock symbol would you like a quote for?')
+    response.add_hash_card( { :title => 'Single Quote', :subtitle => 'Diversify your bonds!' } )
   end
 
   if (alexa_request.type == 'INTENT_REQUEST')
@@ -114,10 +116,9 @@ post '/' do
 
       @symbol = alexa_request.slots['SymbolRequest']['value']
       if @symbol.nil?
-        response.add_speech("I'm sorry, I didn't catch that stock symbol.  You can say things like - Tell me the quote for G.O.O.G.")
+        response.add_speech("I'm sorry, I didn't catch that stock symbol. Which quote would you like?")
       else
         @output = Markit.new.find_quote(@symbol).output
-        p @output
         if @output["Error"]
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
         else

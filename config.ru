@@ -1,2 +1,2 @@
-require './bin/alexa_rubyengine'
+require './bin/single_quote'
 run Sinatra::Application
