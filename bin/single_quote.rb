@@ -20,7 +20,6 @@ configure :production do
 end
 
 
-
 #enable :sessions
 post '/' do
   if settings.production?
@@ -28,10 +27,6 @@ post '/' do
     @uri = URI.parse(@sig_url)
     @host = @uri.host.downcase
     @filename = URI(@uri).path.split('/').last  
-    
-    save_pem
-    read_pem
-    halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert
   end
   
   @body = request.body.read
@@ -100,7 +95,13 @@ post '/' do
     @signature = Base64.decode64(@sig_header) 
     @certificate.public_key.verify(@digest, @signature, @body)
   end
-
+  
+  if settings.production?
+    save_pem
+    read_pem
+    halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert
+  end 
+  
   alexa_request = AlexaRubykit.build_request(@request_json)
   # We can capture Session details inside of request.
   # See session object for more information.
