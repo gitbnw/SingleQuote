@@ -15,25 +15,22 @@ before do
   content_type('application/json')
 end
 
-configure :production do
-  p 'production env'
-  use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
-  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
-  @uri = URI.parse(@sig_url)
-  @host = @uri.host.downcase
-  @filename = URI(@uri).path.split('/').last  
-  
-  
-  check_pem
-  read_pem
-  halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert  
-end
-
-
-
 #enable :sessions
 post '/' do
-  
+  configure :production do
+
+    use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
+    
+    @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
+    @uri = URI.parse(@sig_url)
+    @host = @uri.host.downcase
+    @filename = URI(@uri).path.split('/').last  
+    
+    
+    check_pem
+    read_pem
+    halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert  
+  end  
   @body = request.body.read
   @request_json = JSON.parse(@body.to_s)
   
