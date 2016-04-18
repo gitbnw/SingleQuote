@@ -10,26 +10,30 @@ require 'openssl-extensions/all'
 require 'httparty'
 require 'rack-google-analytics'
 
-use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
+configure :production do
+  p 'production env'
+  use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
+  
+  @uri = URI.parse(@sig_url)
+  @host = @uri.host.downcase
+  @filename = URI(@uri).path.split('/').last  
+  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
+  
+  check_pem
+  read_pem
+  halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert  
+end
 
 # We must return application/json as our content type.
 before do
   content_type('application/json')
 end
 
-# get '/' do
-#   "Hello World!"
-# end
-
 #enable :sessions
 post '/' do
   
   @body = request.body.read
-  @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
-  @uri = URI.parse(@sig_url)
-  @host = @uri.host.downcase
   @request_json = JSON.parse(@body.to_s)
-  @filename = URI(@uri).path.split('/').last
   
   def check_https 
     @sig_url =~ /\A#{URI::regexp(['https'])}\z/
@@ -60,16 +64,20 @@ post '/' do
   end
   
   #save the pem
-  File.open(@filename, "wb") do |saved_file|
-    # the following "open" is provided by open-uri
-    open(@sig_url, "rb") do |read_file|
-      saved_file.write(read_file.read)
+  def save_pem
+    File.open(@filename, "wb") do |saved_file|
+      # the following "open" is provided by open-uri
+      open(@sig_url, "rb") do |read_file|
+        saved_file.write(read_file.read)
+      end
     end
   end
 
   # check the pem
-  raw = File.read @filename # DER- or PEM-encoded
-  @certificate = OpenSSL::X509::Certificate.new raw 
+  def read_pem
+    raw = File.read @filename # DER- or PEM-encoded
+    @certificate = OpenSSL::X509::Certificate.new raw 
+  end
   
   def check_cert_expire
     # The signing certificate has not expired (examine both the Not Before and Not After dates)
@@ -90,8 +98,6 @@ post '/' do
     @signature = Base64.decode64(@sig_header) 
     @certificate.public_key.verify(@digest, @signature, @body)
   end
-  
-  halt 403 unless check_https && check_scheme && check_host && check_path && check_port && check_within150 && check_cert_expire && check_cert_san && verify_cert
 
   alexa_request = AlexaRubykit.build_request(@request_json)
   # We can capture Session details inside of request.
@@ -100,7 +106,7 @@ post '/' do
 
   # We need a response object to respond to the Alexa.
   response = AlexaRubykit::Response.new
-
+  end_session = true
   # Response
   # If it's a launch request
   if (alexa_request.type == 'LAUNCH_REQUEST')
@@ -108,6 +114,8 @@ post '/' do
     # Call your methods for your application here that process your Launch Request.
     response.add_speech('Welcome to Single Quote!  What stock symbol would you like a quote for?')
     response.add_hash_card( { :title => 'Single Quote', :subtitle => 'Diversify your bonds!' } )
+    response.add_reprompt("I provide quote information for most widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
+    end_session = false
   end
 
   if (alexa_request.type == 'INTENT_REQUEST')
@@ -121,7 +129,7 @@ post '/' do
       else
         @output = Markit.new.find_quote(@symbol).output
         if @output["Error"]
-          response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
+          response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for most widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
         else
           @ltp = @output["StockQuote"]["LastPrice"]
           @change_float = @output["StockQuote"]["ChangePercent"].to_f
@@ -138,7 +146,6 @@ post '/' do
             @changestr = "unchanged"
           end
           
-          #I need code to verify the company symbol (or name) is in custom slot values (or do i?  i  at least need to make sure it is a stock (or do I?  I could just check what yahoo returns either way)
           response.add_speech("The last traded price of #{@name} is #{@ltp}, #{@changestr} percent")
           @card_string = "#{@ltp}, #{@change}%"
           response.add_hash_card( { :title => @symbol, :content => @card_string } )  
@@ -155,7 +162,7 @@ post '/' do
   end
 
   # Return response
-  response.build_response
+  response.build_response end_session
 end
 
   class Markit
