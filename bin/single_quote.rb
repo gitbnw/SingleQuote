@@ -21,7 +21,7 @@ configure :production do
 end
 
 get '/' do
-  erb :index
+  erb :'index.html'
 end
 
 #enable :sessions
@@ -165,7 +165,6 @@ post '/' do
       response.add_hash_card( { :title => "Help", :content => "Stock symbols are expected to be spelled out.  Quotes are limited to equities.  Mutual funds and ETFS are not yet supported.  Buy low.  Sell high." } ) 
       end_session = false      
     elsif (alexa_request.name == 'AMAZON.StopIntent')
-      halt 200    
     end    
     
   end
