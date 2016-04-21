@@ -164,7 +164,6 @@ post '/' do
       response.add_speech("I provide quote information for most widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
       response.add_hash_card( { :title => "Help", :content => "Stock symbols are expected to be spelled out.  Quotes are limited to equities.  Mutual funds and ETFS are not yet supported.  Buy low.  Sell high." } ) 
       end_session = false      
-    end
     elsif (alexa_request.name == 'AMAZON.StopIntent')
       halt 200    
     end    
