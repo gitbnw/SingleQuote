@@ -1,3 +1,3 @@
 require './bin/single_quote'
-set :environment, :production
+# set :environment, :production
 run Sinatra::Application

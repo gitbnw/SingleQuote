@@ -9,6 +9,7 @@ require 'open-uri'
 require 'openssl-extensions/all'
 require 'httparty'
 require 'rack-google-analytics'
+require 'tilt/erubis'
 
 # We must return application/json as our content type.
 before do
@@ -19,9 +20,13 @@ configure :production do
   use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
 end
 
+get '/' do
+  erb :index
+end
 
 #enable :sessions
 post '/' do
+  content_type('application/json')
   if settings.production?
     @sig_url = request.env['HTTP_SIGNATURECERTCHAINURL']
     @uri = URI.parse(@sig_url)
@@ -123,16 +128,17 @@ post '/' do
 
   if (alexa_request.type == 'INTENT_REQUEST')
     # Process your Intent Request
-
     if (alexa_request.name == 'GetQuote')
-
-      @symbol = alexa_request.slots['SymbolRequest']['value']
+      @symbol_raw = alexa_request.slots['SymbolRequest']['value']
+      @symbol = @symbol_raw.gsub(/[^A-Za-z]/, '').upcase
       if @symbol.nil?
         response.add_speech("I'm sorry, I didn't catch that stock symbol. Which quote would you like?")
+        end_session = false
       else
         @output = Markit.new.find_quote(@symbol).output
         if @output["Error"]
           response.add_speech("I'm sorry, I couldn't find that listing.  I provide quote information for most widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
+        end_session = false
         else
           @ltp = @output["StockQuote"]["LastPrice"]
           @change_float = @output["StockQuote"]["ChangePercent"].to_f
@@ -154,15 +160,26 @@ post '/' do
           response.add_hash_card( { :title => @symbol, :content => @card_string } )  
         end
       end
+    elsif (alexa_request.name == 'AMAZON.HelpIntent')
+      response.add_speech("I provide quote information for most widely traded companies by their symbol, like AMZN, or TSLA. Which quote would you like? ")
+      response.add_hash_card( { :title => "Help", :content => "Stock symbols are expected to be spelled out.  Quotes are limited to equities.  Mutual funds and ETFS are not yet supported.  Buy low.  Sell high." } ) 
+      end_session = false      
     end
+    elsif (alexa_request.name == 'AMAZON.StopIntent')
+      halt 200    
+    end    
+    
   end
 
+  
   if (alexa_request.type =='SESSION_ENDED_REQUEST')
     # Wrap up whatever we need to do.
     # p "#{alexa_request.type}"
     # p "#{alexa_request.reason}"
     halt 200
   end
+  
+  
 
   # Return response
   response.build_response end_session
