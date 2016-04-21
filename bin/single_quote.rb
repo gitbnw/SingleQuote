@@ -11,11 +11,6 @@ require 'httparty'
 require 'rack-google-analytics'
 require 'tilt/erubis'
 
-# We must return application/json as our content type.
-before do
-  content_type('application/json')
-end
-
 configure :production do
   use Rack::GoogleAnalytics, :tracker => 'UA-76358136-1'
 end
