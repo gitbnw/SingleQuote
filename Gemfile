@@ -9,5 +9,5 @@ gem "alexa_rubykit"
 
 gem 'openssl-extensions', :require => 'openssl-extensions/all'
 
-gem 'rack-google-analytics'
+gem 'staccato'
 
